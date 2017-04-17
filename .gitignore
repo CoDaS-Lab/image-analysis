@@ -90,3 +90,8 @@ ENV/
 
 # Test data
 test/test_data/**/*
+
+############ Editors ########
+
+# Visual Studio Code
+.vscode

@@ -11,28 +11,62 @@ from decode.utils import timeit
 from extract.feature import Feature
 
 
-class FFT(Feature):
-    def __init__(self):
-        Feature.__init__(self, 'fast_fourier_transform', frame_op=True)
-
-    def filter_func(self, center_orientation, orientation_width, high_cutoff,
-                    low_cutoff, target_size, falloff=''):
-        """
-        DESCRIPTION:
+class OrientationFilter(Feature):
+    """DESCRIPTION:\n
             Creates a filter that can be multiplied by the amplitude spectrum
             of an image to increase/decrease specific orientations/spatial
             frequencies.
 
-        PARAMS:
+        PARAMS:\n
             center_orientation: int for the center orientation (0-180).
             orientation_width: int for the orientation width of the filter.
             high_cutoff: int high spatial frequency cutoff.
             low_cutoff: int low spatial frequency cutoff.
             target_size: int total size.
             falloff: string 'triangle' or 'rectangle' shape of the filter
-                     falloff from the center.
+                    falloff from the center."""
 
-        RETURN:
+    def __init__(self, mask='bowtie', center_orientation=90,
+                 orientation_width=20, high_cutoff=None, low_cutoff=.1,
+                 target_size=None, falloff='', ):
+
+        Feature.__init__(self, mask + '_filter', frame_op=True, 
+                         batch_op=False)
+
+        self.mask = mask
+        available_mask = ['bowtie', 'noise']
+        if self.mask not in available_mask:
+            raise ValueError('mask: {0} does not exist'.format(mask))
+
+        self.center_orientation = center_orientation
+        self.orientation_width = orientation_width
+        self.high_cutoff = high_cutoff
+        self.low_cutoff = low_cutoff
+        self.target_size = target_size
+
+        self.falloff = falloff or 'triangle'
+        available_falloff = ['rectangle', 'triangle']
+        if self.falloff not in available_falloff:
+            raise ValueError('falloff: {0} does not exist'.format(self.falloff))
+
+    def bowtie(self, center_orientation, orientation_width, high_cutoff,
+               low_cutoff, target_size, falloff=''):
+        """
+        DESCRIPTION:\n
+            Creates a filter that can be multiplied by the amplitude spectrum
+            of an image to increase/decrease specific orientations/spatial
+            frequencies.
+
+        PARAMS:\n
+            center_orientation: int for the center orientation (0-180).
+            orientation_width: int for the orientation width of the filter.
+            high_cutoff: int high spatial frequency cutoff.
+            low_cutoff: int low spatial frequency cutoff.
+            target_size: int total size.
+            falloff: string 'triangle' or 'rectangle' shape of the filter
+                    falloff from the center.
+
+        RETURN:\n
             filt: return the bowtie shaped filter.
         """
         if (target_size % 2) != 0:
@@ -123,18 +157,18 @@ class FFT(Feature):
                                   (.5 * orientation_width)) ** 4)
             anfilter = angfilter1 + angfilter2
 
-        return(sffilter * anfilter)
+        return sffilter * anfilter
 
     def noise_amp(self, size):
         """
-        DESCRIPTION:
+        DESCRIPTION:\n
             Creates a size x size matrix of randomly generated noise with
             amplitude values with 1/f slope
 
-        PARAMS:
+        PARAMS:\n
             size: size of matrix
 
-        RETURN:
+        RETURN:\n
             returns the amplitudes with noise added
         """
 
@@ -153,43 +187,53 @@ class FFT(Feature):
         amp[0, 0] = 0
         return amp
 
-    def fft_mask(self, input_frame, mask):
+    def extract(self, frame):
         """
-        DESCRIPTION:``
+        DESCRIPTION:\n
             Transforms a matrix using FFT, multiplies the result by a mask, and
-            then transforms the matrix back using Inverse FFT.
+            then transforms the matrix back using Inverse FFT.\n
 
-        PARAMS:
+        PARAMS:\n
             input_frame: (m x n) numpy array
             mask: int determining the type of filter to implement, where
-                  1 = iso and 2 = horizontal decrement, etc.
-            plan_inverse: skcuda.fft.Plan object
+                  1 = iso (noize amp) and 2 = horizontal decrement
+                  (bowtie)
 
-        RETURN:
+        RETURN:\n
             return the transformed and processed frame
         """
-        if input_frame is None:
-            return ValueError('Frame is invalid: {0}'.format(input_frame))
+        if frame is None:
+            return ValueError('Frame is invalid: {0}'.format(grayframe))
 
-        if mask not in [1, 2]:
-            return ValueError('Invalid mask: {0}'.format(mask))
-
-        dft_frame = pyfftw.interfaces.numpy_fft.fft2(input_frame)
+        # fft spectrum
+        grayframe = rgb2gray(frame)
+        dft_frame = pyfftw.interfaces.numpy_fft.fft2(grayframe)
         phase = np.arctan2(dft_frame.imag, dft_frame.real)
         size = np.shape(dft_frame)[1]
 
-        if mask == 1:
+        # create filter
+        if self.mask == 'noise':
             amp = self.noise_amp(size)
-        elif mask == 2:
+        elif self.mask == 'bowtie':
             amp = np.abs(dft_frame)
             # remove this when we have n x n images, amp is not same shape
-            rows = input_frame.shape[1] - input_frame.shape[0]
+            rows = grayframe.shape[1] - grayframe.shape[0]
             padding = np.zeros((rows, size))
             amp = np.append(amp, padding, axis=0)
-            amp = amp * (1 - self.filter_func(90, 20, size // 2,
-                                              .1, size,
-                                              falloff='triangle'))
+            if self.high_cutoff is None:
+                self.high_cutoff = size // 2
 
+            if self.target_size is None:
+                self.target_size = size
+
+            bowtie = self.bowtie(self.center_orientation,
+                                 self.orientation_width, self.high_cutoff,
+                                 self.low_cutoff, self.target_size,
+                                 self.falloff)
+
+            amp = amp * (1 - bowtie)
+
+        # fft spectrum  * amp (filter)
         phase = np.exp(phase * 1j)
         rows = amp.shape[0] - phase.shape[0]
         padding = np.ones((rows, size))
@@ -198,17 +242,18 @@ class FFT(Feature):
 
         # remove the padded values
         amp = amp[:240, :]
+        # inverse fft and normalize
         altimg = pyfftw.interfaces.numpy_fft.ifft2(amp).real
         altimg -= altimg.min()
         altimg /= altimg.max()
 
         return altimg
 
-    def extract(self, frame):
-        grayframe = rgb2gray(frame)
-        filtered_img = self.fft_mask(grayframe, 1)
-        # RMS = 9
-        # filtered_img = np.multiply(RMS, filtered_img)
-        # filtered_img = np.multiply(filtered_img, np.std(filtered_img))
-        # filtered_img = np.add(filtered_img, 5)
-        return filtered_img
+    # def extract(self, frame):
+    #     grayframe = rgb2gray(frame)
+    #     filtered_img = self.fft_mask(grayframe, 1)
+    #     # RMS = 9
+    #     # filtered_img = np.multiply(RMS, filtered_img)
+    #     # filtered_img = np.multiply(filtered_img, np.std(filtered_img))
+    #     # filtered_img = np.add(filtered_img, 5)
+    #     return filtered_img

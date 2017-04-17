@@ -130,7 +130,7 @@ class Pipeline:
         DESCRIPTION:
             extracts all information in operations list. By regular we mean
             that the transformations have no dependencies between each other.
-            This one saves all extraced features.
+            This one saves all extracted features.
 
         RETURN:
             transformed_data
