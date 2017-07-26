@@ -18,7 +18,7 @@ import unittest
 import time
 import numpy as np
 import skimage.io
-from utils import utils
+from image_analysis.utils import utils
 
 
 class TestUtils(unittest.TestCase):

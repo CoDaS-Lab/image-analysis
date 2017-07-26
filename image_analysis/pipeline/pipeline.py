@@ -15,8 +15,8 @@
 
 
 import numpy as np
-from .feature import Feature
 import copy
+from image_analysis.pipeline.feature import Feature
 
 
 class Pipeline:

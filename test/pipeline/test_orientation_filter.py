@@ -20,11 +20,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import skimage.io
 import skimage.color
-from decode import video_decoder as vd
+from image_analysis.decode import video_decoder as vd
 from pyfftw.interfaces.numpy_fft import fftshift
 from pyfftw.interfaces.numpy_fft import fft2
 from pyfftw.interfaces.numpy_fft import ifft2
-from pipeline.orientation_filter import OrientationFilter
+from image_analysis.pipeline.orientation_filter import OrientationFilter
 
 
 class TestFeatureExtractor(unittest.TestCase):

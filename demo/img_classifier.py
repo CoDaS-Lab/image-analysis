@@ -1,10 +1,8 @@
 import os
 import sys
-sys.path.append(os.getcwd() + "/../")
-
 from sklearn import datasets, metrics
-from pipeline.pipeline import Pipeline
-from pipeline.svm import SVM
+from image_analysis.pipeline import Pipeline
+from image_analysis.pipeline import SVM
 
 digits = datasets.load_digits()
 images_and_labels = list(zip(digits.images, digits.target))

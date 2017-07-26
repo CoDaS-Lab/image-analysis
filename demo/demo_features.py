@@ -15,7 +15,7 @@
 
 
 import skimage.color
-from pipeline.feature import Feature
+from image_analysis.pipeline.feature import Feature
 
 
 class RGBToGray(Feature):

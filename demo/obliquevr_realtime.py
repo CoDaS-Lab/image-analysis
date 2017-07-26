@@ -16,16 +16,15 @@
 
 import os
 import sys
-sys.path.append(os.getcwd() + "/../")
 import numpy as np
 import warnings
 import cv2
 import time
 import skimage
-from decode import video_decoder as vd
-from pipeline.orientation_filter import OrientationFilter
-from pipeline.pipeline import Pipeline
-from utils.fps import FPS
+from image_analysis.decode import video_decoder as vd
+from image_analysis.pipeline OrientationFilter
+from image_analysis.pipeline import Pipeline
+from image_analysis.utils import FPS
 
 
 cap = cv2.VideoCapture(0)

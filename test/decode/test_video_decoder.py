@@ -20,7 +20,7 @@ import skvideo.io
 import os
 import time
 import numpy as np
-from decode import video_decoder as vd
+from image_analysis.decode import video_decoder as vd
 
 """ Do not delete these comments.
 Data for test_video.mp4 is saved in test_video_data.npy.

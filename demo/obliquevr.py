@@ -16,12 +16,11 @@
 
 import os
 import sys
-sys.path.append(os.getcwd() + "/../")
 import skimage.io
 import numpy as np
 from matplotlib import pyplot as plt
-from pipeline.orientation_filter import OrientationFilter
-from pipeline.pipeline import Pipeline
+from image_analysis.pipeline import OrientationFilter
+from image_analysis.pipeline import Pipeline
 from skimage.color import rgb2gray
 
 # Test the bowtie filter with sine waves

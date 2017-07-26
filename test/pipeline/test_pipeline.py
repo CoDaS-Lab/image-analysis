@@ -16,10 +16,10 @@
 
 import unittest
 import time
-from decode import video_decoder as vd
-from pipeline.pipeline import Pipeline
-from test.pipeline import test_features as features
-from pipeline.svm import SVM
+import test.pipeline.test_features as features
+from image_analysis.decode import video_decoder as vd
+from image_analysis.pipeline.pipeline import Pipeline
+from image_analysis.pipeline.svm import SVM
 from sklearn import datasets
 
 
